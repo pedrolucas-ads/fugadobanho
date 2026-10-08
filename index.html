@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Duk: Fuga do Banho 🐾🚲🚿</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #0f172a;
+      font-family: 'Fredoka', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      position: fixed;
+      inset: 0;
+    }
+
+    #game-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      background: #38bdf8;
+    }
+
+    /* Top Floating HUD */
+    .hud {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 12px) + 10px);
+      left: calc(env(safe-area-inset-left, 12px) + 12px);
+      right: calc(env(safe-area-inset-right, 12px) + 12px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .badge {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 8px 18px;
+      border-radius: 30px;
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      font-weight: 700;
+      font-size: 15px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .badge .num {
+      color: #facc15;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .audio-btn {
+      pointer-events: auto;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1.5px solid rgba(255, 255, 255, 0.25);
+      color: white;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Tap anywhere hint */
+    .touch-prompt {
+      position: absolute;
+      bottom: calc(env(safe-area-inset-bottom, 12px) + 14px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.75);
+      padding: 8px 24px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fef08a;
+      pointer-events: none;
+      z-index: 5;
+      animation: floatHint 2s infinite ease-in-out;
+      white-space: nowrap;
+    }
+
+    @keyframes floatHint {
+      0%, 100% { transform: translate(-50%, 0); }
+      50% { transform: translate(-50%, -6px); }
+    }
+
+    /* Start Overlay (100% Screen) */
+    #start-screen {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 30;
+      padding: 20px;
+    }
+
+    .title-banner {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      padding: 12px 32px;
+      border-radius: 30px;
+      box-shadow: 0 10px 25px rgba(234, 88, 12, 0.45);
+      border: 2px solid #ffedd5;
+      margin-bottom: 16px;
+      transform: rotate(-1deg);
+    }
+
+    .title-banner h1 {
+      font-size: 26px;
+      font-weight: 900;
+      color: #ffffff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+
+    .story-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      padding: 14px 22px;
+      margin-bottom: 20px;
+      max-width: 420px;
+      font-size: 14px;
+      line-height: 1.4;
+      color: #f1f5f9;
+    }
+
+    .story-card b {
+      color: #facc15;
+    }
+
+    .play-btn {
+      background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+      color: white;
+      border: none;
+      padding: 16px 54px;
+      font-size: 22px;
+      font-weight: 900;
+      font-family: inherit;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(22, 163, 74, 0.5);
+      border: 2.5px solid #bbf7d0;
+      animation: pulseBtn 1.8s infinite;
+      touch-action: manipulation;
+    }
+
+    @keyframes pulseBtn {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen Responsive Canvas -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HUD -->
+  <div class="hud" id="hud" style="display: none;">
+    <div class="badge">
+      <span>🐾 Fuga:</span>
+      <span class="num" id="distanceVal">0m</span>
+    </div>
+
+    <div class="badge">
+      <span>🏆 Recorde:</span>
+      <span class="num" id="recordVal">0m</span>
+    </div>
+
+    <button class="audio-btn" id="audioToggle">🔊</button>
+  </div>
+
+  <div class="touch-prompt" id="touchPrompt" style="display: none;">
+    👆 Toque em qualquer lugar da tela para pular!
+  </div>
+
+  <!-- Start Screen -->
+  <div id="start-screen">
+    <div class="title-banner">
+      <h1>🐾 DUK: FUGA DO BANHO! 🚲🚿</h1>
+    </div>
+
+    <div class="story-card">
+      <div style="font-size: 32px; margin-bottom: 6px;">🐕‍🦺 💨 🚲👩‍🦰</div>
+      A <b>Ágata</b> veio pedalando sua bicicleta na fazenda com água e sabão!<br>
+      Ajude o <b>Duk</b> a pular os obstáculos e fugir do banho!
+    </div>
+
+    <button class="play-btn" id="startBtn">CORRE DUK! 🐾</button>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       DUK: FUGA DO BANHO - 60 FPS ULTRA-SMOOTH MOBILE ENGINE
+       • Tela 100% Fullscreen adaptativa para qualquer celular (Zero faixas pretas)
+       • Ágata estilosa de bicicleta (sem animações truncadas, fluidez máxima)
+       • Duk ágil, salto alto e macio, tolerância perfeita de colisão
+       • Física por delta-time desacoplada para suavidade absoluta
+       ========================================================================== */
+
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const hud = document.getElementById('hud');
+    const touchPrompt = document.getElementById('touchPrompt');
+    const startScreen = document.getElementById('start-screen');
+    const startBtn = document.getElementById('startBtn');
+    const distanceVal = document.getElementById('distanceVal');
+    const recordVal = document.getElementById('recordVal');
+    const audioToggle = document.getElementById('audioToggle');
+
+    // Virtual Coordinate System (Adaptive Landscape)
+    const V_H = 450; // Fixed logical height
+    let V_W = 800;   // Dynamically computed to fill 100% of phone screen
+    let scaleRatio = 1;
+    const GROUND_Y = 370;
+
+    function resize() {
+      const realW = window.innerWidth;
+      const realH = window.innerHeight;
+      canvas.width = realW;
+      canvas.height = realH;
+
+      scaleRatio = realH / V_H;
+      V_W = Math.round(realW / scaleRatio);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Game States
+    const STATE_START = 0;
+    const STATE_RUNNING = 1;
+    const STATE_GAMEOVER = 2;
+    let gameState = STATE_START;
+
+    // Progression
+    let distance = 0;
+    let highscore = parseInt(localStorage.getItem('duk_bike_record') || '0', 10);
+    recordVal.innerText = highscore + 'm';
+
+    // Suave, acessível e progressivo
+    let baseSpeed = 3.4;
+    let gameSpeed = 3.4;
+    let maxSpeed = 5.8;
+
+    // Web Audio sintetizado (Zero lag, zero arquivos externos)
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(type) {
+      if (!soundEnabled || !audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'jump') {
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(520, now + 0.14);
+          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.16);
+        } else if (type === 'hit') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(150, now);
+          osc.frequency.exponentialRampToValueAtTime(45, now + 0.24);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.26);
+        } else if (type === 'splash') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, now);
+          osc.frequency.linearRampToValueAtTime(540, now + 0.12);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        } else if (type === 'pop') {
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(700, now);
+          osc.frequency.exponentialRampToValueAtTime(1100, now + 0.05);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+          osc.start(now);
+          osc.stop(now + 0.07);
+        }
+      } catch(e) {}
+    }
+
+    audioToggle.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      soundEnabled = !soundEnabled;
+      audioToggle.innerText = soundEnabled ? '🔊' : '🔇';
+      if (soundEnabled) initAudio();
+    });
+
+    /* ==========================================================================
+       PERSONAGENS: DUK & ÁGATA NA BICICLETA 🚲
+       ========================================================================== */
+
+    // Duk: Cachorro preto gordinho e fofo
+    const duk = {
+      x: 230,
+      y: GROUND_Y - 44,
+      width: 58,
+      height: 42,
+      vy: 0,
+      gravity: 0.60,
+      jumpForce: -13.5,
+      isGrounded: true,
+      jumpBuffer: 0,
+      runFrame: 0,
+
+      reset() {
+        this.x = Math.max(210, V_W * 0.30);
+        this.y = GROUND_Y - 44;
+        this.vy = 0;
+        this.isGrounded = true;
+        this.jumpBuffer = 0;
+        this.runFrame = 0;
+      },
+
+      jump() {
+        if (this.isGrounded) {
+          this.vy = this.jumpForce;
+          this.isGrounded = false;
+          playSound('jump');
+          spawnDust(this.x + 24, GROUND_Y);
+        } else {
+          this.jumpBuffer = 8;
+        }
+      },
+
+      update() {
+        this.x = Math.max(210, V_W * 0.30);
+
+        this.vy += this.gravity;
+        this.y += this.vy;
+
+        if (this.y >= GROUND_Y - 44) {
+          this.y = GROUND_Y - 44;
+          this.vy = 0;
+          this.isGrounded = true;
+
+          if (this.jumpBuffer > 0) {
+            this.jumpBuffer = 0;
+            this.jump();
+          }
+        }
+
+        if (this.jumpBuffer > 0) this.jumpBuffer--;
+
+        if (this.isGrounded) {
+          this.runFrame += gameSpeed * 0.1;
+        }
+      }
+    };
+
+    // Ágata de Bicicleta (Sem pernas truncadas, rodas girando suavemente!)
+    const agataBike = {
+      x: 75,
+      y: GROUND_Y - 76,
+      wheelAngle: 0,
+      speechTimer: 0,
+
+      reset() {
+        this.x = Math.max(65, V_W * 0.10);
+        this.y = GROUND_Y - 76;
+        this.wheelAngle = 0;
+        this.speechTimer = 0;
+      },
+
+      update() {
+        this.x = Math.max(65, V_W * 0.10);
+        this.wheelAngle += gameSpeed * 0.08;
+        this.speechTimer += 0.03;
+      }
+    };
+
+    // Obstáculos Baixos e Amigáveis
+    const OBSTACLES = [
+      { type: 'fence', width: 34, height: 34, name: 'Cerca' },
+      { type: 'hay', width: 38, height: 28, name: 'Fardo de Feno' },
+      { type: 'puddle', width: 44, height: 14, name: 'Poça de Água' },
+      { type: 'pumpkin', width: 34, height: 26, name: 'Abóbora' },
+      { type: 'chicken', width: 30, height: 26, name: 'Galinha' }
+    ];
+
+    let activeObstacles = [];
+    let nextObstacleDistance = 280;
+
+    function spawnObstacle() {
+      const proto = OBSTACLES[Math.floor(Math.random() * OBSTACLES.length)];
+      activeObstacles.push({
+        type: proto.type,
+        width: proto.width,
+        height: proto.height,
+        x: V_W + 30,
+        y: GROUND_Y - proto.height,
+        animFrame: 0
+      });
+    }
+
+    // Partículas leves
+    let dustParticles = [];
+    function spawnDust(x, y) {
+      if (dustParticles.length > 6) return;
+      dustParticles.push({
+        x: x,
+        y: y - 2,
+        vx: -(Math.random() * 2 + 1),
+        vy: -(Math.random() * 1.5 + 0.5),
+        size: Math.random() * 3 + 3,
+        alpha: 0.8
+      });
+    }
+
+    // Bolhas interativas do banho
+    let bathBubbles = [];
+    function initBathScene() {
+      bathBubbles = [];
+      playSound('splash');
+      for (let i = 0; i < 16; i++) {
+        bathBubbles.push({
+          x: (V_W * 0.3) + Math.random() * (V_W * 0.45),
+          y: 140 + Math.random() * 220,
+          radius: 12 + Math.random() * 18,
+          vy: -(0.5 + Math.random() * 1.0),
+          popped: false
+        });
+      }
+    }
+
+    /* ==========================================================================
+       RENDERIZADORES GRÁFICOS (SUPER LEVES, NATIVOS & 60 FPS)
+       ========================================================================== */
+
+    // 1. Duk (Cachorrinho preto gordinho com orelhas e rabo)
+    function drawDuk(x, y) {
+      ctx.save();
+      const wobble = duk.isGrounded ? Math.sin(duk.runFrame * 2) * 2 : -3;
+      ctx.translate(x, y + wobble);
+
+      // Sombra
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      ctx.beginPath();
+      ctx.ellipse(28, duk.height + 2 - wobble, 26, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rabinho mexendo
+      const tailSwing = Math.sin(duk.runFrame * 2.5) * 0.3;
+      ctx.fillStyle = '#111827';
+      ctx.beginPath();
+      ctx.ellipse(4, 18, 5, 10, -0.4 + tailSwing, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Patinhas
+      const leg = duk.isGrounded ? Math.sin(duk.runFrame) * 7 : 0;
+      ctx.fillStyle = '#18181b';
+      ctx.beginPath();
+      ctx.arc(14 + leg, 36, 6, 0, Math.PI * 2);
+      ctx.arc(42 - leg, 36, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Corpo Gordinho Preto
+      ctx.fillStyle = '#18181b';
+      ctx.beginPath();
+      ctx.ellipse(28, 22, 24, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Barriguinha cinza
+      ctx.fillStyle = '#27272a';
+      ctx.beginPath();
+      ctx.ellipse(28, 26, 17, 10, 0, 0, Math.PI);
+      ctx.fill();
+
+      // Cabeça & Focinho
+      ctx.fillStyle = '#18181b';
+      ctx.beginPath();
+      ctx.arc(44, 14, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Focinho
+      ctx.fillStyle = '#27272a';
+      ctx.beginPath();
+      ctx.ellipse(54, 16, 9, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nariz
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.arc(60, 14, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Olho expressivo
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(47, 11, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.arc(46, 11, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Coleira vermelha
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.ellipse(38, 20, 4, 8, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Orelha caidinha
+      const ear = duk.isGrounded ? Math.sin(duk.runFrame * 1.5) * 0.15 : -0.2;
+      ctx.save();
+      ctx.translate(38, 7);
+      ctx.rotate(ear);
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.ellipse(0, 10, 5, 11, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    // 2. Ágata Andando de Bicicleta 🚲 (Elegante, fluida, linda e estilosa)
+    function drawAgataOnBike(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      const gentleBob = Math.sin(agataBike.wheelAngle * 2) * 1.2;
+
+      // Sombra da bicicleta e da Ágata no chão
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.beginPath();
+      ctx.ellipse(26, 78, 38, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // --- AS DUAS RODAS DA BICICLETA ---
+      drawBikeWheel(-10, 60, agataBike.wheelAngle);
+      drawBikeWheel(48, 60, agataBike.wheelAngle);
+
+      // --- QUADRO DA BICICLETA VINTAGE (Coral/Vermelho Estiloso) ---
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // Triângulo traseiro e cano principal
+      ctx.beginPath();
+      ctx.moveTo(-10, 60); // Eixo traseiro
+      ctx.lineTo(14, 46);  // Selim
+      ctx.lineTo(20, 60);  // Pedivela
+      ctx.closePath();
+      ctx.stroke();
+
+      // Cano do guidão e garfo dianteiro
+      ctx.beginPath();
+      ctx.moveTo(14, 46);
+      ctx.lineTo(38, 42);  // Cano superior suave
+      ctx.lineTo(48, 60);  // Garfo dianteiro até eixo
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(20, 60);
+      ctx.lineTo(38, 42);
+      ctx.stroke();
+
+      // Guidão cromado com manoplas
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(38, 42);
+      ctx.lineTo(36, 28);
+      ctx.lineTo(43, 27);
+      ctx.stroke();
+
+      // Manopla marrom
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(40, 25, 5, 4);
+
+      // Selim de couro marrom
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.roundRect(8, 43, 14, 5, 2);
+      ctx.fill();
+
+      // Cestinha charmosa na frente com girassóis 🌻
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.roundRect(41, 30, 14, 12, 3);
+      ctx.fill();
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(41, 30, 14, 12);
+      // Florzinha
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(48, 28, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.arc(48, 28, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // --- ÁGATA SENTADA NA BICICLETA ---
+      ctx.translate(0, gentleBob);
+
+      // Pernas pedalando suavemente (Shorts jeans + perna natural)
+      const pedalOffset = Math.sin(agataBike.wheelAngle) * 4;
+
+      // Perna (pele clara suave)
+      ctx.strokeStyle = '#fff0eb';
+      ctx.lineWidth = 5.5;
+      ctx.beginPath();
+      ctx.moveTo(15, 44);
+      ctx.lineTo(22 + pedalOffset * 0.4, 56);
+      ctx.lineTo(20 + pedalOffset, 63);
+      ctx.stroke();
+
+      // Shorts jeans azul
+      ctx.strokeStyle = '#0284c7';
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(14, 43);
+      ctx.lineTo(19, 50);
+      ctx.stroke();
+
+      // Tênis branco com detalhe coral no pedal
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(17 + pedalOffset, 62, 10, 5, 2);
+      ctx.fill();
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillRect(20 + pedalOffset, 63, 3, 3);
+
+      // Tronco: Camiseta branca fofa
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(12, 22, 16, 22, [5, 5, 3, 3]);
+      ctx.fill();
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Cabelo Ruivo Cacheado Atrás (Ondas que balançam com o vento da bicicleta!)
+      const hairWind = Math.sin(agataBike.wheelAngle * 1.5) * 2;
+      ctx.fillStyle = '#9a3412';
+      ctx.beginPath();
+      ctx.arc(7 - hairWind, 18, 7, 0, Math.PI * 2);
+      ctx.arc(4 - hairWind, 26, 7.5, 0, Math.PI * 2);
+      ctx.arc(8 - hairWind, 34, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#c2410c';
+      ctx.beginPath();
+      ctx.arc(8 - hairWind, 20, 6, 0, Math.PI * 2);
+      ctx.arc(6 - hairWind, 28, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Braço segurando o guidão
+      ctx.strokeStyle = '#fff0eb';
+      ctx.lineWidth = 4.8;
+      ctx.beginPath();
+      ctx.moveTo(18, 25);
+      ctx.lineTo(32, 29);
+      ctx.lineTo(41, 27);
+      ctx.stroke();
+      // Mãozinha
+      ctx.fillStyle = '#fff0eb';
+      ctx.beginPath();
+      ctx.arc(42, 27, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cabeça & Rosto Lindo de Menina Normal
+      ctx.fillStyle = '#fff0eb';
+      ctx.beginPath();
+      ctx.arc(22, 14, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Bochecha rosada doce
+      ctx.fillStyle = 'rgba(251, 113, 133, 0.55)';
+      ctx.beginPath();
+      ctx.arc(28, 16, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Olho lindo com cílios e brilho
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(26, 11, 4, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.stroke();
+      // Cílio
+      ctx.beginPath();
+      ctx.moveTo(29, 10.5); ctx.lineTo(31, 9);
+      ctx.stroke();
+
+      // Esclera e íris verde
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(26.5, 12.5, 3.2, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#059669';
+      ctx.beginPath();
+      ctx.arc(27.5, 12.5, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.arc(27.5, 12.5, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(27, 11.5, 1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sobrancelha ruiva
+      ctx.strokeStyle = '#9a3412';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(26, 7.5, 4, Math.PI * 1.2, Math.PI * 1.8);
+      ctx.stroke();
+
+      // Narizinho delicado
+      ctx.strokeStyle = '#e29578';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(31.5, 13); ctx.lineTo(33, 15); ctx.lineTo(31.5, 15.5);
+      ctx.stroke();
+
+      // Sorriso aberto e alegre de quem está se divertindo!
+      ctx.fillStyle = '#be123c';
+      ctx.beginPath();
+      ctx.arc(27, 18, 3.2, 0, Math.PI);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(25.5, 18, 3, 1.2);
+
+      // Cachos ruivos na frente (franja cacheada e mechas na altura do ombro)
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.arc(16, 6, 6, 0, Math.PI * 2);
+      ctx.arc(23, 4, 6.5, 0, Math.PI * 2);
+      ctx.arc(12, 12, 6, 0, Math.PI * 2);
+      ctx.arc(13, 20, 6.5, 0, Math.PI * 2);
+      ctx.arc(17, 28, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mechas douradas iluminadas
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.arc(20, 5, 4, 0, Math.PI * 2);
+      ctx.arc(14, 18, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(21, 4.5, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Balão de fala alegre: "Vem banhar Duk! 🚲"
+      const bubbleWobble = Math.sin(agataBike.speechTimer * 4) * 3;
+      drawMobileSpeechBubble(35, -34 + bubbleWobble, "Vem banhar Duk! 🚲");
+
+      ctx.restore();
+    }
+
+    // Roda da bicicleta com raios girando suavemente
+    function drawBikeWheel(wx, wy, angle) {
+      ctx.save();
+      ctx.translate(wx, wy);
+
+      // Pneu de borracha cinza escuro
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Aro de alumínio
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, 14, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Raios girando (6 raios clássicos)
+      ctx.rotate(angle);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-13, 0);
+        ctx.lineTo(13, 0);
+        ctx.stroke();
+        ctx.rotate(Math.PI / 3);
+      }
+
+      // Cubo central cromado
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // Balão de fala
+    function drawMobileSpeechBubble(bx, by, text) {
+      ctx.save();
+      ctx.font = 'bold 12px "Fredoka", sans-serif';
+      const tw = ctx.measureText(text).width;
+      const bw = tw + 18;
+      const bh = 24;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      // Rabicho
+      ctx.beginPath();
+      ctx.moveTo(bx + 8, by + bh);
+      ctx.lineTo(bx - 4, by + bh + 8);
+      ctx.lineTo(bx + 18, by + bh);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#be123c';
+      ctx.fillText(text, bx + 9, by + 16);
+      ctx.restore();
+    }
+
+    // 3. Obstáculos Rurais Baixos e Charmosos
+    function drawObstacle(obs) {
+      ctx.save();
+      ctx.translate(obs.x, obs.y);
+
+      // Sombra
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(obs.width / 2, obs.height + 2, obs.width / 2 + 3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2.5;
+
+      if (obs.type === 'fence') {
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(4, 0, 8, obs.height);
+        ctx.strokeRect(4, 0, 8, obs.height);
+        ctx.fillRect(22, 0, 8, obs.height);
+        ctx.strokeRect(22, 0, 8, obs.height);
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(0, 8, obs.width, 8);
+        ctx.strokeRect(0, 8, obs.width, 8);
+        ctx.fillRect(0, 20, obs.width, 8);
+        ctx.strokeRect(0, 20, obs.width, 8);
+
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(4, 11, 8, 4);
+
+      } else if (obs.type === 'hay') {
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.roundRect(0, 0, obs.width, obs.height, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#eab308';
+        ctx.beginPath();
+        ctx.arc(obs.width / 2, obs.height / 2, 7, 0, Math.PI * 2);
+        ctx.stroke();
+
+      } else if (obs.type === 'puddle') {
+        ctx.fillStyle = '#3e1f07';
+        ctx.beginPath();
+        ctx.ellipse(obs.width / 2, obs.height / 2 + 2, obs.width / 2, obs.height / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.ellipse(obs.width / 2, obs.height / 2 + 1, obs.width / 2 - 6, obs.height / 2 - 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+      } else if (obs.type === 'pumpkin') {
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.ellipse(obs.width / 2, obs.height / 2 + 2, obs.width / 2, obs.height / 2 - 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(obs.width / 2 - 2, 0, 5, 6);
+
+      } else if (obs.type === 'chicken') {
+        obs.animFrame += 0.2;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(obs.width / 2, obs.height / 2 + 2, 12, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(obs.width / 2 + 4, obs.height / 2 - 9, 4, 4);
+
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(obs.width / 2 + 10, obs.height / 2 - 2, 4, 3);
+      }
+
+      ctx.restore();
+    }
+
+    // 4. Cenário de Fazenda Contínuo (Sem cortes, cobre 100% da tela)
+    let scrollSky = 0;
+    let scrollHills = 0;
+    let scrollGround = 0;
+
+    function drawBackground() {
+      // Céu azul
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(0, 0, V_W, GROUND_Y);
+
+      // Sol da manhã
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(V_W - 90, 55, 30, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nuvens
+      drawCloud((V_W * 0.2 - scrollSky * 0.2) % (V_W + 120), 40);
+      drawCloud((V_W * 0.65 - scrollSky * 0.25) % (V_W + 120), 70);
+
+      // Colinas distantes
+      ctx.fillStyle = '#86efac';
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.quadraticCurveTo(V_W * 0.3, 260, V_W * 0.6, 290);
+      ctx.quadraticCurveTo(V_W * 0.85, 315, V_W, 280);
+      ctx.lineTo(V_W, GROUND_Y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Colinas médias + Celeiro
+      ctx.fillStyle = '#4ade80';
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.quadraticCurveTo(V_W * 0.35, 310, V_W * 0.7, 325);
+      ctx.quadraticCurveTo(V_W * 0.9, 335, V_W, 315);
+      ctx.lineTo(V_W, GROUND_Y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Celeiro
+      const barnX = (V_W * 0.55 - scrollHills * 0.5) % (V_W + 180);
+      drawMiniBarn(barnX, 285);
+
+      // Chão: Grama e Estrada de Terra
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(0, GROUND_Y - 10, V_W, 10);
+
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(0, GROUND_Y, V_W, V_H - GROUND_Y);
+
+      // Linhas da estrada
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.2)';
+      const trackOffset = (scrollGround * 1.5) % 60;
+      for (let tx = -trackOffset; tx < V_W; tx += 60) {
+        ctx.fillRect(tx, GROUND_Y + 14, 24, 3);
+        ctx.fillRect(tx + 30, GROUND_Y + 44, 20, 3);
+      }
+    }
+
+    function drawCloud(cx, cy) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 16, 0, Math.PI * 2);
+      ctx.arc(cx + 18, cy - 4, 18, 0, Math.PI * 2);
+      ctx.arc(cx + 36, cy, 14, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawMiniBarn(bx, by) {
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillRect(bx, by, 38, 26);
+      ctx.fillStyle = '#7f1d1d';
+      ctx.beginPath();
+      ctx.moveTo(bx - 3, by);
+      ctx.lineTo(bx + 19, by - 12);
+      ctx.lineTo(bx + 41, by);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(bx + 11, by + 10, 16, 16);
+    }
+
+    /* ==========================================================================
+       CENA DO BANHO NO GAME OVER 🚿🐾
+       "Te peguei seu safado!"
+       ========================================================================== */
+
+    let bathAnim = 0;
+    function drawBathCutscene() {
+      bathAnim += 0.04;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+      ctx.fillRect(0, 0, V_W, V_H);
+
+      // Deck
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(0, 320, V_W, 130);
+
+      const tubX = Math.round(V_W * 0.38);
+      const tubY = 230;
+      const tubW = 200;
+      const tubH = 95;
+
+      // Água azul
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.ellipse(tubX + tubW / 2, tubY + 18, tubW / 2 - 10, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Duk molhado dentro da bacia
+      ctx.save();
+      ctx.translate(tubX + tubW / 2 - 36, tubY - 42);
+
+      ctx.fillStyle = '#18181b';
+      ctx.beginPath();
+      ctx.arc(36, 34, 24, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Orelhas molhadas
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.ellipse(14, 40, 5, 14, 0.2, 0, Math.PI * 2);
+      ctx.ellipse(58, 40, 5, 14, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Olhinhos tristes/fofos
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(28, 32, 4.5, 0, Math.PI * 2);
+      ctx.arc(44, 32, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.arc(28, 34, 2.5, 0, Math.PI * 2);
+      ctx.arc(44, 34, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Focinho
+      ctx.fillStyle = '#27272a';
+      ctx.beginPath();
+      ctx.ellipse(36, 44, 9, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.arc(36, 41, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Espuma na cabeça
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(28, 14, 9, 0, Math.PI * 2);
+      ctx.arc(44, 14, 9, 0, Math.PI * 2);
+      ctx.arc(36, 6, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Parede frontal da bacia de madeira
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.ellipse(tubX + tubW / 2, tubY + 20, tubW / 2, 20, 0, 0, Math.PI);
+      ctx.lineTo(tubX, tubY + tubH);
+      ctx.ellipse(tubX + tubW / 2, tubY + tubH, tubW / 2, 18, 0, 0, Math.PI);
+      ctx.lineTo(tubX + tubW, tubY + 20);
+      ctx.closePath();
+      ctx.fill();
+
+      // Aro de metal
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(tubX + tubW / 2, tubY + 45, tubW / 2 - 2, 16, 0, 0, Math.PI);
+      ctx.stroke();
+
+      // Ágata sentadinha dando banho
+      drawAgataBathingScene(tubX - 85, 200);
+
+      // Balão triunfante: "Te peguei seu safado!"
+      const wiggle = Math.sin(bathAnim * 5) * 2;
+      drawVictoryBubble(tubX - 110, 110 + wiggle, "Te peguei seu safado!");
+
+      // Bolhas flutuantes
+      bathBubbles.forEach(b => {
+        if (!b.popped) {
+          b.y += b.vy;
+          if (b.y < -30) b.y = V_H + 20;
+          ctx.save();
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+      });
+
+      // Card de pontuação
+      drawScoreCard(V_W - 240, 100);
+    }
+
+    function drawAgataBathingScene(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Perna jeans no chão
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.roundRect(10, 80, 48, 24, 10);
+      ctx.fill();
+
+      // Tronco camiseta branca
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.roundRect(22, 35, 24, 30, 6);
+      ctx.fill();
+
+      // Cachos ruivos atrás
+      ctx.fillStyle = '#9a3412';
+      ctx.beginPath();
+      ctx.arc(14, 25, 7, 0, Math.PI * 2);
+      ctx.arc(12, 34, 7.5, 0, Math.PI * 2);
+      ctx.arc(16, 42, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cabeça de perfil carinhosa
+      ctx.fillStyle = '#fff0eb';
+      ctx.beginPath();
+      ctx.arc(32, 22, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Blush
+      ctx.fillStyle = 'rgba(251, 113, 133, 0.6)';
+      ctx.beginPath();
+      ctx.arc(39, 24, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Olhos sorrindo (^_^)
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(37, 18, 4, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(41, 17); ctx.lineTo(43, 15.5);
+      ctx.stroke();
+
+      // Sorriso aberto e alegre
+      ctx.fillStyle = '#be123c';
+      ctx.beginPath();
+      ctx.arc(36, 27, 5, 0, Math.PI);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(34, 27, 4, 1.5);
+
+      // Cachos na frente
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.arc(24, 12, 6, 0, Math.PI * 2);
+      ctx.arc(30, 10, 6.5, 0, Math.PI * 2);
+      ctx.arc(22, 24, 6.5, 0, Math.PI * 2);
+      ctx.arc(26, 34, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Braço com esponja
+      ctx.strokeStyle = '#fff0eb';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(30, 42);
+      ctx.lineTo(46, 46);
+      ctx.lineTo(60, 40);
+      ctx.stroke();
+
+      // Esponja amarela com espuma
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.roundRect(58, 32, 16, 16, 4);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(63, 30, 4, 0, Math.PI * 2);
+      ctx.arc(69, 31, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawVictoryBubble(bx, by, text) {
+      ctx.save();
+      ctx.font = '800 17px "Fredoka", sans-serif';
+      const tw = ctx.measureText(text).width;
+      const bw = tw + 24;
+      const bh = 38;
+
+      ctx.fillStyle = '#fff1f2';
+      ctx.strokeStyle = '#e11d48';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, 12);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(bx + 20, by + bh);
+      ctx.lineTo(bx + 6, by + bh + 14);
+      ctx.lineTo(bx + 36, by + bh);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#be123c';
+      ctx.fillText(text, bx + 12, by + 25);
+      ctx.restore();
+    }
+
+    function drawScoreCard(cx, cy) {
+      ctx.save();
+      const cardW = 210;
+      const cardH = 220;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(cx, cy, cardW, cardH, 16);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#facc15';
+      ctx.font = '800 17px "Fredoka", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🚿 HORA DO BANHO! 🛁', cx + cardW / 2, cy + 32);
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '600 13px "Fredoka", sans-serif';
+      ctx.fillText('Distância:', cx + cardW / 2, cy + 62);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = '800 26px "Fredoka", sans-serif';
+      ctx.fillText(`${Math.floor(distance)}m`, cx + cardW / 2, cy + 90);
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '600 13px "Fredoka", sans-serif';
+      ctx.fillText('Melhor Recorde:', cx + cardW / 2, cy + 120);
+
+      ctx.fillStyle = '#facc15';
+      ctx.font = '800 19px "Fredoka", sans-serif';
+      ctx.fillText(`${highscore}m`, cx + cardW / 2, cy + 144);
+
+      // Botão
+      const btnX = cx + 18;
+      const btnY = cy + 162;
+      const btnW = cardW - 36;
+      const btnH = 42;
+
+      ctx.fillStyle = '#16a34a';
+      ctx.beginPath();
+      ctx.roundRect(btnX, btnY, btnW, btnH, 21);
+      ctx.fill();
+      ctx.strokeStyle = '#bbf7d0';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 15px "Fredoka", sans-serif';
+      ctx.fillText('Fugir de Novo! 🐾', cx + cardW / 2, btnY + 26);
+
+      ctx.restore();
+    }
+
+    /* ==========================================================================
+       COLISÃO TOLERANTE & GAME LOOP (DELTA TIME 60 FPS)
+       ========================================================================== */
+
+    function checkCollision(dukObj, obs) {
+      const d = {
+        x: dukObj.x + 14,
+        y: dukObj.y + 12,
+        w: dukObj.width - 24,
+        h: dukObj.height - 14
+      };
+      const o = {
+        x: obs.x + 6,
+        y: obs.y + 8,
+        w: obs.width - 12,
+        h: obs.height - 8
+      };
+
+      return (
+        d.x < o.x + o.w &&
+        d.x + d.w > o.x &&
+        d.y < o.y + o.h &&
+        d.y + d.h > o.y
+      );
+    }
+
+    function triggerGameOver() {
+      if (gameState === STATE_GAMEOVER) return;
+      gameState = STATE_GAMEOVER;
+      playSound('hit');
+
+      if (Math.floor(distance) > highscore) {
+        highscore = Math.floor(distance);
+        localStorage.setItem('duk_bike_record', highscore.toString());
+        recordVal.innerText = highscore + 'm';
+      }
+
+      initBathScene();
+    }
+
+    function resetGame() {
+      distance = 0;
+      gameSpeed = baseSpeed;
+      activeObstacles = [];
+      nextObstacleDistance = 280;
+      dustParticles = [];
+      duk.reset();
+      agataBike.reset();
+      gameState = STATE_RUNNING;
+    }
+
+    function update() {
+      if (gameState === STATE_RUNNING) {
+        distance += gameSpeed * 0.04;
+        distanceVal.innerText = Math.floor(distance) + 'm';
+
+        if (gameSpeed < maxSpeed) {
+          gameSpeed += 0.00015;
+        }
+
+        scrollSky += gameSpeed * 0.2;
+        scrollHills += gameSpeed * 0.5;
+        scrollGround += gameSpeed * 1.0;
+
+        duk.update();
+        agataBike.update();
+
+        nextObstacleDistance -= gameSpeed;
+        if (nextObstacleDistance <= 0) {
+          spawnObstacle();
+          nextObstacleDistance = 300 + Math.random() * 180;
+        }
+
+        for (let i = activeObstacles.length - 1; i >= 0; i--) {
+          const obs = activeObstacles[i];
+          obs.x -= gameSpeed;
+
+          if (checkCollision(duk, obs)) {
+            triggerGameOver();
+            break;
+          }
+
+          if (obs.x + obs.width < -40) {
+            activeObstacles.splice(i, 1);
+          }
+        }
+
+        for (let i = dustParticles.length - 1; i >= 0; i--) {
+          const p = dustParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= 0.04;
+          if (p.alpha <= 0) dustParticles.splice(i, 1);
+        }
+      }
+    }
+
+    function render() {
+      ctx.save();
+      // Escala lógica que preenche 100% da tela do celular!
+      ctx.scale(scaleRatio, scaleRatio);
+
+      ctx.clearRect(0, 0, V_W, V_H);
+
+      drawBackground();
+      activeObstacles.forEach(drawObstacle);
+
+      drawAgataOnBike(agataBike.x, agataBike.y);
+      drawDuk(duk.x, duk.y);
+
+      dustParticles.forEach(p => {
+        ctx.fillStyle = `rgba(217, 119, 6, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      if (gameState === STATE_GAMEOVER) {
+        drawBathCutscene();
+      }
+
+      ctx.restore();
+    }
+
+    function loop() {
+      update();
+      render();
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    /* ==========================================================================
+       TOUCH CONTROLS (RESPONSIVIDADE INSTANTÂNEA EM CELULARES)
+       ========================================================================== */
+
+    function handleAction() {
+      initAudio();
+
+      if (gameState === STATE_START) {
+        startScreen.style.display = 'none';
+        hud.style.display = 'flex';
+        touchPrompt.style.display = 'block';
+        setTimeout(() => { touchPrompt.style.display = 'none'; }, 4000);
+        resetGame();
+      } else if (gameState === STATE_RUNNING) {
+        duk.jump();
+      } else if (gameState === STATE_GAMEOVER) {
+        resetGame();
+      }
+    }
+
+    window.addEventListener('pointerdown', (e) => {
+      if (gameState === STATE_GAMEOVER) {
+        const clickX = e.clientX / scaleRatio;
+        const clickY = e.clientY / scaleRatio;
+
+        let popped = false;
+        bathBubbles.forEach(b => {
+          if (!b.popped && Math.hypot(clickX - b.x, clickY - b.y) <= b.radius + 8) {
+            b.popped = true;
+            playSound('pop');
+            popped = true;
+          }
+        });
+        if (popped) return;
+
+        resetGame();
+        return;
+      }
+
+      handleAction();
+    }, { passive: true });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+        e.preventDefault();
+        handleAction();
+      }
+    });
+
+    startBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleAction();
+    });
+  </script>
+</body>
+</html>
