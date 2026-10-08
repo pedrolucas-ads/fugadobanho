@@ -396,14 +396,7 @@
 
     // Balão de fala chamando de longe
     let speechTimer = 0;
-    const agataPhrases = [
-      "Vem banhar, Duk! 🚿",
-      "Volta aqui, gordinho! 🧼",
-      "Olha o shampoo de morango! 🍓",
-      "Duk! Hoje tem banho sim! 🐾",
-      "Vem ficar cheiroso, Duk! ✨"
-    ];
-    let currentPhrase = agataPhrases[0];
+    const currentPhrase = "Vem banhar, Duk! 🚿";
 
     // Obstáculos baixos e fáceis
     const OBSTACLES = [
@@ -1068,10 +1061,8 @@
 
         duk.update();
 
-        // Balão da Ágata variando as frases a cada 8 metros
+        // Balão da Ágata chamando de longe
         speechTimer += 0.04;
-        const phraseIdx = Math.floor(distance / 8) % agataPhrases.length;
-        currentPhrase = agataPhrases[phraseIdx];
 
         // Obstáculos espaçados e tranquilos
         nextObstacleDistance -= gameSpeed;
